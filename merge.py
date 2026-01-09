@@ -12,20 +12,35 @@ except ImportError:
 # --- ページ設定 ---
 st.set_page_config(page_title="PDF結合ツール", layout="centered")
 
-# --- カスタムCSS（番号エリアのデザイン） ---
+# --- カスタムCSS（全体の色調整） ---
 st.markdown("""
     <style>
-    /* 番号を表示する丸い枠のデザイン */
+    /* 1. 「結合する」ボタンなどのボタン色を緑系にする */
+    div.stButton > button {
+        background-color: #e8f5e9 !important; /* 背景：かなり薄い緑 */
+        color: #2e7d32 !important;           /* 文字：深緑 */
+        border: 1px solid #a5d6a7 !important; /* 枠線：薄い緑 */
+        border-radius: 8px;
+    }
+    /* ボタンにマウスを乗せたときの色 */
+    div.stButton > button:hover {
+        background-color: #c8e6c9 !important; /* 少し濃い薄緑 */
+        color: #1b5e20 !important;
+        border-color: #81c784 !important;
+    }
+
+    /* 2. 左側の番号ボックスのデザイン */
     .number-box {
-        background-color: #d4edda; /* 薄緑色 */
-        color: #155724; /* 深緑色の文字 */
+        background-color: #e8f5e9; /* ボタンと同じ薄緑 */
+        color: #2e7d32;            /* 深緑 */
+        border: 1px solid #a5d6a7;
         width: 30px;
-        height: 46px; /* 右側のボックスの高さに合わせて調整 */
+        height: 46px; /* 右側のリストアイテムの高さに合わせる */
         display: flex;
         align-items: center;
         justify_content: center;
         border-radius: 5px;
-        margin-bottom: 6px; /* ボックス間の隙間に合わせる */
+        margin-bottom: 6px;
         font-weight: bold;
         font-family: sans-serif;
     }
@@ -53,7 +68,6 @@ uploaded_pdfs = st.file_uploader(
 )
 
 if uploaded_pdfs:
-    # ファイル名とデータの紐付け
     pdf_dict = {file.name: file for file in uploaded_pdfs}
     
     if 'current_order' not in st.session_state or len(st.session_state['current_order']) != len(uploaded_pdfs):
@@ -66,30 +80,30 @@ if uploaded_pdfs:
         st.subheader("2. 順番の並べ替え")
         st.info("左の番号に合わせて、右の箱を並べ替えてください。")
     with col_header_2:
+        # このボタンもCSSで緑色になります
         if st.button("🗑️ 最初に戻る", on_click=reset_app):
             pass
 
     # --- 2. ドラッグ＆ドロップ画面 ---
-    # レイアウト：左の列に番号、右の列にドラッグエリア
     col_nums, col_sort = st.columns([1, 10])
     
     with col_nums:
-        # ファイルの数だけ番号を表示
-        # 右側のボックスと高さを合わせるため、CSSでheightを指定したdivを作ります
+        # CSSで緑色にした番号ボックスを表示
         for i in range(len(st.session_state['current_order'])):
             st.markdown(f'<div class="number-box">{i+1}</div>', unsafe_allow_html=True)
 
     with col_sort:
-        # ドラッグ可能なリスト（色は変えられませんが、機能はそのままです）
+        # ※注意: 右側のドラッグボックス自体の色はライブラリの制限で変更できない場合がありますが
+        # 周囲のボタンや番号の色を緑に統一することで、全体の印象を和らげています。
         sorted_names = sort_items(st.session_state['current_order'], direction="vertical")
 
-    # 並べ替え結果を保存
     st.session_state['current_order'] = sorted_names
 
     st.write("---")
 
     # --- 3. 結合実行ボタン ---
-    if st.button("この順序で結合する", type="primary"):
+    # CSSで緑色になります
+    if st.button("この順序で結合する"):
         merger = PdfWriter()
         try:
             progress_bar = st.progress(0)
