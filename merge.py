@@ -2,7 +2,7 @@ import streamlit as st
 from pypdf import PdfWriter
 import io
 
-# 外部ライブラリ（ドラッグ＆ドロップ機能）
+# 外部ライブラリ
 try:
     from streamlit_sortables import sort_items
 except ImportError:
@@ -12,29 +12,28 @@ except ImportError:
 # --- ページ設定 ---
 st.set_page_config(page_title="PDF結合ツール", layout="centered")
 
-# --- カスタムCSS（デザイン調整） ---
-# ここで色や番号の見た目を指定しています
+# --- カスタムCSS（番号エリアのデザイン） ---
 st.markdown("""
     <style>
-    /* ソート可能なリストアイテムのスタイル */
-    .sortable-item {
-        background-color: #d4edda !important; /* 薄緑色 */
-        color: #155724 !important; /* 文字色は深緑 */
-        border: 1px solid #c3e6cb !important;
+    /* 番号を表示する丸い枠のデザイン */
+    .number-box {
+        background-color: #d4edda; /* 薄緑色 */
+        color: #155724; /* 深緑色の文字 */
+        width: 30px;
+        height: 46px; /* 右側のボックスの高さに合わせて調整 */
+        display: flex;
+        align-items: center;
+        justify_content: center;
         border-radius: 5px;
-        margin-bottom: 5px;
-        padding: 10px;
-        font-family: monospace; /* 等幅フォントで見やすく */
-    }
-    /* リスト（ol）の番号を表示させるための設定 */
-    div[data-testid="stVerticalBlock"] > div > div > div > div {
-        counter-reset: sortable-counter;
+        margin-bottom: 6px; /* ボックス間の隙間に合わせる */
+        font-weight: bold;
+        font-family: sans-serif;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("📄 PDF結合ツール")
-st.write("ファイルをアップロードし、ドラッグして並べ替えてください。")
+st.write("ファイルをアップロードし、右側のボックスをドラッグして並べ替えてください。")
 
 # --- リセット機能 ---
 if 'reset_count' not in st.session_state:
@@ -62,56 +61,44 @@ if uploaded_pdfs:
 
     st.write("---")
     
-    col1, col2 = st.columns([3, 1])
-    with col1:
+    col_header_1, col_header_2 = st.columns([3, 1])
+    with col_header_1:
         st.subheader("2. 順番の並べ替え")
-        st.info("下のリストをドラッグして並べ替えてください。")
-    with col2:
+        st.info("左の番号に合わせて、右の箱を並べ替えてください。")
+    with col_header_2:
         if st.button("🗑️ 最初に戻る", on_click=reset_app):
             pass
 
-    # --- 2. ファイル名の装飾（番号と長さの視覚化） ---
-    # 表示用に「1. ファイル名 ■■■...」のような文字列を作ってリストに渡します
-    display_items = []
+    # --- 2. ドラッグ＆ドロップ画面 ---
+    # レイアウト：左の列に番号、右の列にドラッグエリア
+    col_nums, col_sort = st.columns([1, 10])
     
-    # 元の順序リストを使って、表示用テキストを作成
-    original_order = st.session_state['current_order']
-    
-    # ユーザーに見せるための工夫（番号をつける）
-    # ※ sort_items自体は文字列しか扱えないため、ここで加工します
-    # ただし、並べ替え後に元のファイル名に戻す処理が必要になります
-    
-    # 今回はシンプルに、sort_itemsの機能で並べ替えさせます。
-    # 色（薄緑）は上のCSSで適用されます。
-    
-    sorted_items = sort_items(original_order, direction="vertical")
+    with col_nums:
+        # ファイルの数だけ番号を表示
+        # 右側のボックスと高さを合わせるため、CSSでheightを指定したdivを作ります
+        for i in range(len(st.session_state['current_order'])):
+            st.markdown(f'<div class="number-box">{i+1}</div>', unsafe_allow_html=True)
 
-    # 並べ替え結果をセッションに保存（次回描画時用）
-    st.session_state['current_order'] = sorted_items
+    with col_sort:
+        # ドラッグ可能なリスト（色は変えられませんが、機能はそのままです）
+        sorted_names = sort_items(st.session_state['current_order'], direction="vertical")
 
-    # ユーザーへのフィードバック（番号付きでプレビュー表示）
-    st.write("👇 **現在の結合順序（確定イメージ）:**")
-    for idx, name in enumerate(sorted_items):
-        # ファイル名の長さに応じたバーを表示する工夫
-        # 全角文字が含まれると長さ計算がズレますが、簡易的に文字数でバーを作ります
-        bar_length = min(len(name), 20) # 最大20文字分まで
-        bar = "🟩" * int(bar_length / 2) # バーの見た目
-        
-        st.text(f"{idx + 1}. {name}  {bar}")
+    # 並べ替え結果を保存
+    st.session_state['current_order'] = sorted_names
 
     st.write("---")
 
     # --- 3. 結合実行ボタン ---
-    if st.button("並べ替えた順序で結合する"):
+    if st.button("この順序で結合する", type="primary"):
         merger = PdfWriter()
         try:
             progress_bar = st.progress(0)
             
-            for i, name in enumerate(sorted_items):
+            for i, name in enumerate(sorted_names):
                 if name in pdf_dict:
                     pdf_obj = pdf_dict[name]
                     merger.append(pdf_obj)
-                progress_bar.progress((i + 1) / len(sorted_items))
+                progress_bar.progress((i + 1) / len(sorted_names))
             
             output_buffer = io.BytesIO()
             merger.write(output_buffer)
