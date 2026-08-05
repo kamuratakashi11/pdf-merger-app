@@ -2,3 +2,4 @@ streamlit
 pypdf
 streamlit-sortables
 cryptography
+starlette<1.4.0
